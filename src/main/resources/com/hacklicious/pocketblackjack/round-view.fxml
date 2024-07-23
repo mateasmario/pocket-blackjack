@@ -14,21 +14,24 @@
     <children>
         <HBox VBox.vgrow="ALWAYS">
             <GridPane prefHeight="100.0" prefWidth="233.0" HBox.hgrow="ALWAYS">
-            <HBox.margin>
-               <Insets />
-            </HBox.margin></GridPane>
-            <ScrollPane fx:id="scrollPane" prefHeight="100.0" prefWidth="207.0" HBox.hgrow="NEVER">
-            <content>
-               <VBox fx:id="vbox" prefHeight="418.0" prefWidth="197.0" spacing="10.0">
-                  <padding>
-                     <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
-                  </padding></VBox>
-            </content></ScrollPane>
+                <HBox.margin>
+                    <Insets />
+                </HBox.margin>
+            </GridPane>
+            <ScrollPane fx:id="scrollPane" prefHeight="419.0" prefWidth="254.0" HBox.hgrow="NEVER">
+                <content>
+                    <VBox fx:id="vbox" prefHeight="418.0" prefWidth="242.0" spacing="10.0">
+                        <padding>
+                            <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                        </padding>
+                    </VBox>
+                </content>
+            </ScrollPane>
         </HBox>
         <HBox alignment="BOTTOM_CENTER" spacing="20" VBox.vgrow="NEVER">
-            <Button fx:id="hitButton" onAction="#onHitButtonClick" prefHeight="41.0" prefWidth="147.0" text="Hit" />
-            <Button fx:id="standButton" onAction="#onStandButtonClick" prefHeight="41.0" prefWidth="147.0" text="Stand" />
-            <Button fx:id="startButton" onAction="#onStartButtonClick" prefHeight="41.0" prefWidth="147.0" text="Start" />
+            <Button id="button" fx:id="hitButton" onAction="#onHitButtonClick" prefHeight="41.0" prefWidth="147.0" text="Hit" />
+            <Button id="button" fx:id="standButton" onAction="#onStandButtonClick" prefHeight="41.0" prefWidth="147.0" text="Stand" />
+            <Button id="button" fx:id="startButton" onAction="#onStartButtonClick" prefHeight="41.0" prefWidth="147.0" text="Start" />
         </HBox>
     </children>
 </VBox>

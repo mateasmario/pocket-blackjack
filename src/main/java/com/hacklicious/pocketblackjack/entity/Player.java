@@ -6,6 +6,7 @@ import java.util.List;
 public class Player {
     private String name;
     private List<Card> localDeck;
+    private boolean ready;
 
     public Player(String name) {
         this.name = name;
@@ -26,5 +27,13 @@ public class Player {
 
     public void setLocalDeck(List<Card> localDeck) {
         this.localDeck = localDeck;
+    }
+
+    public boolean isReady() {
+        return ready;
+    }
+
+    public void setReady(boolean ready) {
+        this.ready = ready;
     }
 }

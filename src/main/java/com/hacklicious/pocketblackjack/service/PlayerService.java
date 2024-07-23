@@ -84,4 +84,8 @@ public class PlayerService {
 
         return deckValue;
     }
+
+    public List<Player> getPlayerList() {
+        return playerList;
+    }
 }

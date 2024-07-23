@@ -12,6 +12,7 @@ public class ApplicationRunner extends Application {
     public void start(Stage stage) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(ApplicationRunner.class.getResource("round-view.fxml"));
         Scene scene = new Scene(fxmlLoader.load(), 700, 500);
+        scene.getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
         stage.setTitle("Pocket Blackjack");
         stage.setScene(scene);
         stage.show();
