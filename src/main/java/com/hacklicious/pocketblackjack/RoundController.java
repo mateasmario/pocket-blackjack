@@ -28,6 +28,9 @@ public class RoundController {
     private final DecisionService decisionService = new DecisionService();
 
     private static final int PLAYER_COUNT = 3;
+    private static final int PLAYER_DEALER = PLAYER_COUNT - 1;
+    private static final int PLAYER_USER = PLAYER_COUNT - 2;
+
     private static final double RISK_DECISION = 0.75;
 
     @FXML
@@ -46,28 +49,29 @@ public class RoundController {
     private Button startButton;
 
     @FXML
+    private Label secondaryText;
+
+    @FXML
+    private Label primaryText;
+
+    @FXML
     protected void initialize() {
         scrollPane.viewportBoundsProperty().addListener((observable, oldValue, newValue) -> vbox.setPrefWidth(newValue.getWidth()));
 
         toggleInteraction(false);
 
-        for (int i = 0; i < PLAYER_COUNT; i++) {
+        for (int playerId = 0; playerId < PLAYER_COUNT; playerId++) {
             VBox playerBox = new VBox();
 
             HBox playerTitleHbox = new HBox();
             Label playerTitleLabel = new Label();
             playerTitleLabel.setStyle("-fx-font-weight: bold;");
 
-            String playerName = switch (i) {
-                case PLAYER_COUNT - 2 -> "You";
-                case PLAYER_COUNT - 1 -> "Dealer";
-                default -> "Player " + i;
-            };
-            playerTitleLabel.setText(playerName);
+            playerTitleLabel.setText(playerService.mapPlayerIdToString(PLAYER_COUNT, playerId));
             playerTitleHbox.getChildren().add(playerTitleLabel);
 
             HBox playerCardsHbox = new HBox();
-            playerCardsHbox.setId("cards_" + i);
+            playerCardsHbox.setId("cards_" + playerId);
             playerCardsHbox.setSpacing(10);
 
             Label label = new Label();
@@ -76,7 +80,7 @@ public class RoundController {
 
             playerBox.getChildren().add(0, playerTitleHbox);
             playerBox.getChildren().add(1, playerCardsHbox);
-            playerBox.setId("box_" + i);
+            playerBox.setId("box_" + playerId);
 
             playerBox.setStyle(StyleConstants.PLAYER_BOX);
 
@@ -87,7 +91,7 @@ public class RoundController {
     @FXML
     protected void onStartButtonClick() {
         if (playerService.getPlayerList() != null) {
-            for(int i = 0; i<PLAYER_COUNT; i++) {
+            for (int playerId = 0; playerId < PLAYER_COUNT; playerId++) {
                 vbox.getChildren().remove(0);
             }
 
@@ -100,26 +104,21 @@ public class RoundController {
         cardService.initializeGlobalDeck();
         playerService.initializePlayerList(PLAYER_COUNT);
 
-        // Bot logic
         final int[] playerId = {0};
         Timeline timeline = new Timeline();
         timeline.getKeyFrames().add(new KeyFrame(Duration.seconds(1), e -> {
-            if (playerId[0] >= PLAYER_COUNT - 2) {
-                // Player logic
+            if (isUser(playerId[0])) {
                 timeline.stop();
-            } else {
-                if (playerId[0] > 0) {
-                    Player player = playerService.getPlayer(0);
-                    if (player.isReady()) {
-                        executeBotLogic(playerId[0]);
-                        playerId[0]++;
-                    } else {
-                        // Player not yet ready (for debugging)
-                    }
-                } else {
+            } else if (!isFirstBot(playerId[0])) {
+                if (playerService.getPlayer(0).isReady()) {
                     executeBotLogic(playerId[0]);
                     playerId[0]++;
+                } else {
+                    // Player not yet ready (for debugging)
                 }
+            } else {
+                executeBotLogic(playerId[0]);
+                playerId[0]++;
             }
         }));
 
@@ -133,18 +132,14 @@ public class RoundController {
         toggleInteraction(false);
 
         Card randomCard = cardService.popRandomCard();
-        playerService.addCard(PLAYER_COUNT - 2, randomCard);
-        addCardToPlayer(PLAYER_COUNT - 2, randomCard);
+        playerService.addCard(PLAYER_USER, randomCard);
+        addCardToPlayer(PLAYER_USER, randomCard);
 
-        if (playerService.isWin(PLAYER_COUNT - 2)) {
-            // Player won. Show win screen
-            VBox userVbox = (VBox) (vbox.lookup("#box_" + (PLAYER_COUNT - 2)));
-            userVbox.setStyle(StyleConstants.PLAYER_BOX);
-        } else if (playerService.isLose(PLAYER_COUNT - 2)) {
-            // Player lost. Show lose screen
-            startButton.setDisable(false);
-            VBox userVbox = (VBox) (vbox.lookup("#box_" + (PLAYER_COUNT - 2)));
-            userVbox.setStyle(StyleConstants.PLAYER_BOX);
+        if (playerService.isWin(PLAYER_USER)) {
+            removeHighlight(PLAYER_USER);
+
+        } else if (playerService.isLose(PLAYER_USER)) {
+            removeHighlight(PLAYER_USER);
         } else {
             toggleInteraction(true);
         }
@@ -154,11 +149,18 @@ public class RoundController {
     protected void onStandButtonClick() {
         toggleInteraction(false);
 
-        VBox playerVbox = (VBox) (vbox.lookup("#box_" + (PLAYER_COUNT - 2)));
-        playerVbox.setStyle(StyleConstants.PLAYER_BOX);
+        removeHighlight(PLAYER_USER);
 
         // Execute dealer logic
-        executeBotLogic(PLAYER_COUNT - 1);
+        executeBotLogic(PLAYER_DEALER);
+    }
+
+    private boolean isUser(int playerId) {
+        return playerId == PLAYER_USER;
+    }
+
+    private boolean isFirstBot(int playerId) {
+        return playerId <= 0;
     }
 
     private void executeBotLogic(int playerId) {
@@ -169,21 +171,7 @@ public class RoundController {
 
         Timeline timeline = new Timeline();
         timeline.getKeyFrames().add(new KeyFrame(Duration.seconds(3), e -> {
-            if (playerService.getDeckValue(playerService.getPlayer(playerId).getLocalDeck()) < 17) {
-                Card randomCard = cardService.popRandomCard();
-                playerService.addCard(playerId, randomCard);
-
-                addCardToPlayer(playerId, randomCard);
-                player.setReady(false);
-            } else {
-                if (decisionService.generateRiskDecision(RISK_DECISION).equals(Decision.YES)) {
-                    Card randomCard = cardService.popRandomCard();
-                    playerService.addCard(playerId, randomCard);
-                } else {
-                    // Show a message with the bot standing
-                }
-                player.setReady(true);
-            }
+            executeBotHitOrStand(playerId);
 
             if (player.isReady()) {
                 playerVbox.setStyle(StyleConstants.PLAYER_BOX);
@@ -193,28 +181,33 @@ public class RoundController {
                     toggleInteraction(true);
                 }
 
-                // If dealer
-                if (playerId == PLAYER_COUNT - 1) {
+                if (playerId == PLAYER_DEALER) {
                     List<Player> winnerList = playerService.identifyWinners();
 
                     if (winnerList.size() == 1) {
-                        // User is the winner
-                        if (winnerList.get(0).equals(playerService.getPlayer(PLAYER_COUNT - 2))) {
-                            // Display win message
+                        if (winnerList.get(0).equals(playerService.getPlayer(PLAYER_USER))) {
+                            // ToDo: Display win message
+                            primaryText.setText("Congratulations");
+                            secondaryText.setText("You shamelessly won this round.");
                         } else {
-                            // Display lose message for user (someone else won)
+                            // ToDo: Display lose message for user (someone else won)
+                            primaryText.setText("Loser :(");
+                            secondaryText.setText("You'd better find some place to work. You suck at blackjack.");
                         }
                     } else {
-                        if (winnerList.contains(playerService.getPlayer(PLAYER_COUNT - 2))) {
-                            // Display win message
+                        if (winnerList.contains(playerService.getPlayer(PLAYER_USER))) {
+                            // ToDo:  Display win message
+                            primaryText.setText("Congratulations");
+                            secondaryText.setText("You're one of the winners :)");
                         } else {
-                            // Display lose message for user (someone else won)
+                            // ToDo: Display lose message for user (someone else won)
+                            primaryText.setText("Loser :(");
+                            secondaryText.setText("You'd better find some place to work. You suck at blackjack.");
                         }
                     }
 
                     startButton.setDisable(false);
-                }
-                else {
+                } else {
                     VBox userVbox = (VBox) (vbox.lookup("#box_" + (playerId + 1)));
                     userVbox.setStyle(StyleConstants.PLAYER_BOX_SELECTED);
                 }
@@ -226,6 +219,39 @@ public class RoundController {
 
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.play();
+    }
+
+    private void executeBotHitOrStand(int playerId) {
+        Player player = playerService.getPlayer(playerId);
+
+        if (playerService.getDeckValue(player.getLocalDeck()) < 17) {
+            Card randomCard = cardService.popRandomCard();
+            playerService.addCard(playerId, randomCard);
+
+            primaryText.setText(cardService.mapCardToString(randomCard));
+            secondaryText.setText("Player " + playerId + " decided to hit and got: ");
+
+            addCardToPlayer(playerId, randomCard);
+            player.setReady(false);
+        } else {
+            if (decisionService.generateRiskDecision(RISK_DECISION).equals(Decision.YES)) {
+                Card randomCard = cardService.popRandomCard();
+                playerService.addCard(playerId, randomCard);
+
+                primaryText.setText(cardService.mapCardToString(randomCard));
+                secondaryText.setText("Player " + playerId + " risked it and got: ");
+            } else {
+                // ToDo: Check if this works
+                primaryText.setText("Stand");
+                secondaryText.setText("Player " + playerId + " decides to stand.");
+            }
+            player.setReady(true);
+        }
+    }
+
+    private void removeHighlight(int playerId) {
+        VBox userVbox = (VBox) (vbox.lookup("#box_" + (playerId)));
+        userVbox.setStyle(StyleConstants.PLAYER_BOX);
     }
 
     private void addCardToPlayer(int playerId, Card card) {

@@ -85,6 +85,21 @@ public class PlayerService {
         return deckValue;
     }
 
+    public static String mapPlayerIdToString(int playerCount, int playerId) {
+        int you = playerCount - 2;
+        int dealer = playerCount - 1;
+
+        if (playerId == playerCount - 2) {
+            return "You";
+        }
+        else if (playerId == playerCount - 1) {
+            return "Dealer";
+        }
+        else {
+            return "Player " + playerId;
+        }
+    }
+
     public List<Player> getPlayerList() {
         return playerList;
     }
