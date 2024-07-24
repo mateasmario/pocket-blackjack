@@ -34,14 +34,14 @@
                <RowConstraints />
             </rowConstraints>
             <children>
-               <VBox alignment="BASELINE_CENTER" prefHeight="430.0" prefWidth="426.0" GridPane.columnIndex="3" GridPane.rowIndex="3">
+               <VBox alignment="CENTER" prefHeight="430.0" prefWidth="426.0" GridPane.columnIndex="3" GridPane.hgrow="ALWAYS" GridPane.rowIndex="3" GridPane.vgrow="ALWAYS">
                   <children>
-                     <Label fx:id="secondaryText" alignment="CENTER" prefHeight="165.0" prefWidth="362.0" text="Waiting for player..." VBox.vgrow="ALWAYS" />
-                     <Label fx:id="primaryText" alignment="CENTER" prefHeight="45.0" prefWidth="150.0" text="No action." VBox.vgrow="ALWAYS">
+                     <Label fx:id="primaryText" alignment="CENTER" prefHeight="28.0" prefWidth="366.0" text="No action.">
                         <font>
                            <Font size="31.0" />
                         </font>
                      </Label>
+                     <Label fx:id="secondaryText" alignment="CENTER" prefHeight="0.0" prefWidth="362.0" text="Waiting for player..." />
                   </children>
                </VBox>
             </children>

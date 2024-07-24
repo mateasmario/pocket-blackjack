@@ -49,7 +49,7 @@ public class PlayerService {
 
         for (Player player : playerList) {
             int deckValue = getDeckValue(player.getLocalDeck());
-            if (deckValue > maxValue) {
+            if (deckValue > maxValue && deckValue <= 21) {
                 maxValue = deckValue;
             }
         }

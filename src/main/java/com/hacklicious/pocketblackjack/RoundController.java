@@ -105,10 +105,19 @@ public class RoundController {
         playerService.initializePlayerList(PLAYER_COUNT);
 
         final int[] playerId = {0};
+        final int[] counter = {0};
         Timeline timeline = new Timeline();
         timeline.getKeyFrames().add(new KeyFrame(Duration.seconds(1), e -> {
-            if (isUser(playerId[0])) {
-                timeline.stop();
+            if (isUser(playerId[0]) && playerService.getPlayer(playerId[0] - 1).isReady()) {
+                if (counter[0] == 0) {
+                    counter[0]++;
+                } else {
+                    addHighlight(PLAYER_USER);
+                    primaryText.setText("Your turn");
+                    secondaryText.setText("Would you like to take a card or stand?");
+                    toggleInteraction(true);
+                    timeline.stop();
+                }
             } else if (!isFirstBot(playerId[0])) {
                 if (playerService.getPlayer(0).isReady()) {
                     executeBotLogic(playerId[0]);
@@ -117,6 +126,7 @@ public class RoundController {
                     // Player not yet ready (for debugging)
                 }
             } else {
+                addHighlight(playerId[0]);
                 executeBotLogic(playerId[0]);
                 playerId[0]++;
             }
@@ -131,28 +141,49 @@ public class RoundController {
     protected void onHitButtonClick() {
         toggleInteraction(false);
 
-        Card randomCard = cardService.popRandomCard();
-        playerService.addCard(PLAYER_USER, randomCard);
-        addCardToPlayer(PLAYER_USER, randomCard);
+        primaryText.setText("Processing your action...");
+        secondaryText.setText("You speak to the dealer.");
 
-        if (playerService.isWin(PLAYER_USER)) {
-            removeHighlight(PLAYER_USER);
+        Timeline timeline = new Timeline();
+        timeline.getKeyFrames().add(new KeyFrame(Duration.seconds(2), e -> {
+            Card randomCard = cardService.popRandomCard();
+            playerService.addCard(PLAYER_USER, randomCard);
+            addCardToPlayer(PLAYER_USER, randomCard);
 
-        } else if (playerService.isLose(PLAYER_USER)) {
-            removeHighlight(PLAYER_USER);
-        } else {
+            primaryText.setText("Got a " + cardService.mapCardToString(randomCard));
+            secondaryText.setText("You decided to hit.");
+
             toggleInteraction(true);
-        }
+        }));
+
+        timeline.play();
     }
 
     @FXML
     protected void onStandButtonClick() {
         toggleInteraction(false);
 
-        removeHighlight(PLAYER_USER);
+        primaryText.setText("Processing your action...");
+        secondaryText.setText("You speak to the dealer.");
 
-        // Execute dealer logic
-        executeBotLogic(PLAYER_DEALER);
+        final int counter[] = {0};
+
+        Timeline timeline = new Timeline();
+        timeline.getKeyFrames().add(new KeyFrame(Duration.seconds(2), e -> {
+            if (counter[0] == 0) {
+                primaryText.setText("Stand");
+                secondaryText.setText("You decide to not pick any more cards.");
+                removeHighlight(PLAYER_USER);
+                counter[0]++;
+            } else {
+                playerService.getPlayer(PLAYER_USER).setReady(true);
+                executeBotLogic(PLAYER_DEALER);
+                timeline.stop();
+            }
+        }));
+
+        timeline.setCycleCount(Timeline.INDEFINITE);
+        timeline.play();
     }
 
     private boolean isUser(int playerId) {
@@ -169,50 +200,47 @@ public class RoundController {
 
         Player player = playerService.getPlayer(playerId);
 
+        final int counter[] = {0};
+
         Timeline timeline = new Timeline();
-        timeline.getKeyFrames().add(new KeyFrame(Duration.seconds(3), e -> {
-            executeBotHitOrStand(playerId);
+        timeline.getKeyFrames().add(new KeyFrame(Duration.seconds(2), e -> {
+            if (counter[0] == 0) {
+                primaryText.setText("Picking an option...");
+                secondaryText.setText((playerId == PLAYER_DEALER ? "Dealer" : "Player") + " thinks if they need a card or not.");
+                counter[0]++;
+            } else {
+                executeBotHitOrStand(playerId);
 
-            if (player.isReady()) {
-                playerVbox.setStyle(StyleConstants.PLAYER_BOX);
+                if (player.isReady()) {
+                    if (playerId == PLAYER_DEALER) {
+                        List<Player> winnerList = playerService.identifyWinners();
 
-                // If last player before user
-                if (playerId == PLAYER_COUNT - 3) {
-                    toggleInteraction(true);
-                }
-
-                if (playerId == PLAYER_DEALER) {
-                    List<Player> winnerList = playerService.identifyWinners();
-
-                    if (winnerList.size() == 1) {
-                        if (winnerList.get(0).equals(playerService.getPlayer(PLAYER_USER))) {
-                            // ToDo: Display win message
-                            primaryText.setText("Congratulations");
-                            secondaryText.setText("You shamelessly won this round.");
+                        if (winnerList.size() == 1) {
+                            if (winnerList.get(0).equals(playerService.getPlayer(PLAYER_USER))) {
+                                primaryText.setText("Congratulations");
+                                secondaryText.setText("You shamelessly won this round.");
+                            } else {
+                                primaryText.setText("Loser :(");
+                                secondaryText.setText("You'd better find some place to work. You suck at blackjack.");
+                            }
                         } else {
-                            // ToDo: Display lose message for user (someone else won)
-                            primaryText.setText("Loser :(");
-                            secondaryText.setText("You'd better find some place to work. You suck at blackjack.");
+                            if (winnerList.contains(playerService.getPlayer(PLAYER_USER))) {
+                                primaryText.setText("Congratulations");
+                                secondaryText.setText("You're one of the winners :)");
+                            } else {
+                                primaryText.setText("Loser :(");
+                                secondaryText.setText("You'd better find some place to work. You suck at blackjack.");
+                            }
                         }
-                    } else {
-                        if (winnerList.contains(playerService.getPlayer(PLAYER_USER))) {
-                            // ToDo:  Display win message
-                            primaryText.setText("Congratulations");
-                            secondaryText.setText("You're one of the winners :)");
-                        } else {
-                            // ToDo: Display lose message for user (someone else won)
-                            primaryText.setText("Loser :(");
-                            secondaryText.setText("You'd better find some place to work. You suck at blackjack.");
-                        }
+
+                        startButton.setDisable(false);
                     }
 
-                    startButton.setDisable(false);
-                } else {
-                    VBox userVbox = (VBox) (vbox.lookup("#box_" + (playerId + 1)));
-                    userVbox.setStyle(StyleConstants.PLAYER_BOX_SELECTED);
+                    removeHighlight(playerId);
+                    timeline.stop();
                 }
 
-                timeline.stop();
+                counter[0] = 0;
             }
         }));
 
@@ -228,8 +256,8 @@ public class RoundController {
             Card randomCard = cardService.popRandomCard();
             playerService.addCard(playerId, randomCard);
 
-            primaryText.setText(cardService.mapCardToString(randomCard));
-            secondaryText.setText("Player " + playerId + " decided to hit and got: ");
+            primaryText.setText("Got a " + cardService.mapCardToString(randomCard));
+            secondaryText.setText((playerId == PLAYER_DEALER ? "Dealer" : ("Player " + playerId)) + " decided to hit.");
 
             addCardToPlayer(playerId, randomCard);
             player.setReady(false);
@@ -238,15 +266,19 @@ public class RoundController {
                 Card randomCard = cardService.popRandomCard();
                 playerService.addCard(playerId, randomCard);
 
-                primaryText.setText(cardService.mapCardToString(randomCard));
-                secondaryText.setText("Player " + playerId + " risked it and got: ");
+                primaryText.setText("Got a " + cardService.mapCardToString(randomCard));
+                secondaryText.setText((playerId == PLAYER_DEALER ? "Dealer" : ("Player " + playerId)) + " risked it.");
             } else {
-                // ToDo: Check if this works
                 primaryText.setText("Stand");
-                secondaryText.setText("Player " + playerId + " decides to stand.");
+                secondaryText.setText((playerId == PLAYER_DEALER ? "Dealer" : ("Player " + playerId)) + " decides to stand.");
             }
             player.setReady(true);
         }
+    }
+
+    private void addHighlight(int playerId) {
+        VBox playerVbox = (VBox) (vbox.lookup("#box_" + playerId));
+        playerVbox.setStyle(StyleConstants.PLAYER_BOX_SELECTED);
     }
 
     private void removeHighlight(int playerId) {
